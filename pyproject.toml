@@ -1,0 +1,38 @@
+[project]
+name = "daily-paper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Antoine Berthier", email = "antoine.berthier@effixis.be" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "feedparser>=6.0.14",
+    "httpx>=0.28.1",
+    "jinja2>=3.1.6",
+    "markdown-it-py>=4.2.0",
+    "mdit-py-plugins>=0.6.1",
+    "pyyaml>=6.0.3",
+    "ruamel-yaml>=0.19.1",
+]
+
+[project.scripts]
+daily-paper = "daily_paper:main"
+
+[project.optional-dependencies]
+talos = [
+    "talos",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.uv.sources]
+talos = { path = "../TALOS", editable = true }

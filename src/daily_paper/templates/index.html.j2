@@ -1,0 +1,93 @@
+{% extends "_base.html.j2" %}
+{% block title %}Daily Paper — éditions{% endblock %}
+{% block style %}
+.list { list-style: none; padding: 0; margin: 0 0 40px; font-family: var(--sans); }
+.list li { display: flex; gap: 12px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.list .date { font: 600 16px/1.3 var(--serif); min-width: 190px; }
+.list .date a { color: var(--ink); text-decoration: none; }
+.list .date a:hover { color: var(--accent); }
+.list .topics { font-size: 13px; color: var(--muted); flex: 1; }
+.dot { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.dot.unread { color: var(--accent); font-weight: 600; }
+.panel { font: 15px/1.5 var(--sans); background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; margin-bottom: 20px; }
+.panel h3 { font: 700 18px/1.3 var(--serif); margin: 0 0 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+.chips label { border: 1px solid var(--rule); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; color: var(--muted); }
+.chips input { display: none; }
+.chips input:checked + span { color: var(--accent); }
+.chips label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.status { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 1.4em; }
+.empty { font: 15px/1.5 var(--sans); color: var(--muted); margin-bottom: 40px; }
+@media (max-width: 520px) { .list li { flex-wrap: wrap; } .list .date { min-width: 0; width: 100%; } }
+{% endblock %}
+{% block body %}
+<header class="masthead">
+  <h1>Daily Paper</h1>
+  <div class="meta">{{ editions|length }} édition{{ "s" if editions|length != 1 }}</div>
+</header>
+
+{% if editions %}
+<ul class="list">
+{% for e in editions %}
+  <li>
+    <span class="date"><a href="/e/{{ e.id }}/">{{ e.date_label }}</a></span>
+    <span class="topics">{{ e.labels | join(" · ") }}</span>
+    {% if e.read_at %}<span class="dot">lue</span>{% else %}<span class="dot unread">non lue</span>{% endif %}
+  </li>
+{% endfor %}
+</ul>
+{% else %}
+<p class="empty">Aucune édition pour l'instant.</p>
+{% endif %}
+
+<div class="panel">
+  <h3>Édition à la demande</h3>
+  <div>Rubriques (aucune cochée = tirage habituel) :</div>
+  <div class="chips">
+  {% for id, t in topics.items() %}<label><input type="checkbox" value="{{ id }}"><span>{{ t.label }}</span></label>{% endfor %}
+  </div>
+  <button class="btn primary" id="gen">Générer maintenant</button>
+  <div class="status" id="gen-status">{{ status.job or "" }}</div>
+</div>
+
+<div class="panel">
+  <h3>Retours</h3>
+  <div>{{ status.pending_feedback }} retour{{ "s" if status.pending_feedback != 1 }} en attente — appliqués automatiquement avant chaque édition.</div>
+  <textarea id="note" placeholder="Une remarque générale : ajoute une rubrique, change le ton, 3 articles max…" style="margin-top:10px"></textarea>
+  <p style="text-align:right;margin:8px 0 0"><button class="btn" id="send">Envoyer</button> <button class="btn primary" id="apply">Appliquer maintenant</button></p>
+  {% if status.recent_changes %}
+  <div class="status" style="margin-top:14px">Derniers réglages :<br>{% for c in status.recent_changes %}· {{ c }}<br>{% endfor %}</div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block script %}
+<script>
+const st = document.getElementById("gen-status");
+async function poll() {
+  try {
+    const s = await (await fetch("/api/status")).json();
+    st.textContent = s.job || "";
+    if (s.job) setTimeout(poll, 3000); else if (s.last_result) st.textContent = s.last_result;
+    if (s.last_edition && s.job === null && window._waiting) location.reload();
+  } catch (e) {}
+}
+document.getElementById("gen").addEventListener("click", async () => {
+  const topics = [...document.querySelectorAll(".chips input:checked")].map(x => x.value);
+  const r = await api("/api/generate", {topics});
+  if (!r) return toast("Serveur injoignable");
+  if (!r.started) return toast(r.reason || "Déjà en cours");
+  window._waiting = true; toast("C'est parti (quelques minutes)"); poll();
+});
+document.getElementById("send").addEventListener("click", async () => {
+  const ta = document.getElementById("note"); if (!ta.value.trim()) return;
+  const ok = await api("/api/feedback", {text: ta.value.trim()});
+  if (ok) ta.value = ""; toast(ok ? "Noté" : "Serveur injoignable");
+});
+document.getElementById("apply").addEventListener("click", async () => {
+  const r = await api("/api/apply-feedback");
+  if (!r) return toast("Serveur injoignable");
+  toast(r.started ? "Application des retours…" : (r.reason || "Déjà en cours")); poll();
+});
+{% if status.job %}poll();{% endif %}
+</script>
+{% endblock %}

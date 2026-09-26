@@ -1,0 +1,45 @@
+# Réglages globaux de la gazette. Modifiables à la main, via `daily-paper cfg`,
+# ou par l'agent de feedback (chaque modification est commitée dans git).
+
+# Ton général de l'écriture (injecté dans chaque prompt de rédaction).
+tone: >-
+  Chaleureux, curieux et un brin décalé, comme un ami cultivé qui te raconte
+  ce qu'il a découvert. Tutoiement. Phrases courtes et concrètes, pas de
+  superlatifs creux ni de formules de remplissage. Une pointe d'humour quand
+  le sujet s'y prête.
+
+# Nombre d'articles « magazine » par édition (hors rubriques toujours présentes
+# comme l'actualité).
+articles:
+  min: 2
+  max: 4
+
+# Longueur cible par défaut d'un article, en mots (surchargeable par rubrique).
+words: 170
+
+# Génération automatique : jours (0 = lundi … 6 = dimanche) et heure.
+schedule:
+  weekdays: [0, 1, 2, 3, 4]
+  time: "07:30"
+
+# Pas de nouvelle édition automatique tant qu'une édition de moins de N jours
+# n'a pas été lue (évite l'empilement).
+unread_block_days: 5
+
+writer:
+  model: sonnet            # alias ou id complet passé à `claude --model`
+  budget_usd: 0.8          # plafond par article (--max-budget-usd)
+  timeout_s: 600
+  parallel: 3
+  retries: 1               # nouvelle tentative si la validation échoue
+
+server:
+  host: 127.0.0.1
+  port: 8765
+
+feedback:
+  agent: talos             # talos | claude
+  talos_preset: null       # ex. glm-5.3-flash-novita ; null = défaut TALOS
+  escalation_model: opus
+  auto_merge: true         # merge sur main si les tests passent après une escalade
+  auto_push: false

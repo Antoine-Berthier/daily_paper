@@ -1,0 +1,259 @@
+# Pool de rubriques.
+#
+# Chaque rubrique :
+#   label         titre affiché
+#   probability   fréquence visée (0.33 ≈ une édition sur trois). Les rubriques
+#                 sont choisies par crédit (smooth weighted round-robin) : la
+#                 fréquence est respectée sur la durée sans trous ni rafales.
+#   always        toujours présente (ne compte pas dans articles.min/max)
+#   optional      l'agent peut renoncer si rien ne mérite d'être dit (skip)
+#   words         longueur cible (sinon settings.words)
+#   instructions  consignes de recherche et d'écriture
+#   headlines     flux RSS dont les titres récents sont fournis à l'agent
+#   seed          générateur de diversité (voir ci-dessous)
+#   subtypes      variantes tirées en « sac mélangé » selon leur weight ;
+#                 leurs instructions/seed complètent ceux de la rubrique
+#
+# seed :
+#   facets        {nom: {pool: <config/pools/nom.yaml> | values: [...],
+#                        strategy: bag | recency | uniform}}
+#   feeds         liste de flux ; un billet récent est tiré au hasard et sert
+#                 de point de départ (source réelle garantie)
+#   feed_max_age_days
+#   provider      générateur spécifique (dico2rue)
+#   verbalized    true → l'agent liste des candidats avec leur probabilité et
+#                 doit prendre celui du rang tiré au hasard (dans la queue)
+#   angle         true → un angle d'écriture est tiré dans pools/angles.yaml
+
+topics:
+  actu:
+    label: Actualités
+    always: true
+    words: 260
+    headlines:
+      max_age_hours: 36
+      feeds:
+        - https://www.bruzz.be/rss.xml
+        - https://rss.rtbf.be/article/rss/highlight_rtbf_info.xml
+        - https://www.lalibre.be/arc/outboundfeeds/rss/?outputType=xml
+        - https://www.lesoir.be/rss2/2/cible_principale
+        - https://www.levif.be/feed/
+        - https://www.lavenir.net/arc/outboundfeeds/rss/?outputType=xml
+        - https://www.vrt.be/vrtnws/en.rss.articles.xml
+        - https://www.lemonde.fr/international/rss_full.xml
+        - https://www.france24.com/fr/rss
+        - https://www.rfi.fr/fr/rss
+        - https://feeds.bbci.co.uk/news/world/rss.xml
+    instructions: |
+      Rédige 3 à 5 brèves : d'abord Bruxelles, puis la Belgique, puis
+      l'international seulement si un événement est vraiment majeur.
+      L'importance se mesure à la couverture : un sujet repris par plusieurs
+      rédactions indépendantes dans les titres fournis est prioritaire.
+      Ignore faits divers, sport (sauf événement historique), people et météo.
+      Chaque brève : un titre court en gras suivi de 2-3 phrases factuelles, et
+      au moins un lien vers l'article source. Ouvre chaque article (WebFetch)
+      avant d'en parler. Si un sujet déjà traité récemment a connu un
+      développement réel, tu peux en faire la suite (indique continuity_of).
+
+  genai:
+    label: IA générative
+    always: true
+    optional: true
+    words: 200
+    headlines:
+      max_age_hours: 120
+      feeds:
+        - https://simonwillison.net/atom/everything/
+        - https://hnrss.org/frontpage?points=300
+        - https://openai.com/news/rss.xml
+        - https://deepmind.google/blog/rss.xml
+        - https://blog.google/technology/ai/rss/
+        - https://huggingface.co/blog/feed.xml
+        - https://www.latent.space/feed
+    instructions: |
+      Ne parle que d'une annonce réellement importante des derniers jours :
+      sortie d'un modèle majeur (frontière ou open-weights marquant), rupture
+      de prix ou de capacités, changement réglementaire d'ampleur. Vérifie
+      aussi via WebSearch (annonces Anthropic, OpenAI, Google, Meta, Mistral,
+      DeepSeek, Qwen…). Si rien n'atteint ce niveau ou si c'est déjà dans
+      l'historique, renonce (skip = true). Explique concrètement ce qui change
+      pour un utilisateur ou un développeur, chiffres à l'appui.
+
+  blog_ia:
+    label: Fabriquer avec l'IA
+    probability: 0.33
+    words: 220
+    seed:
+      feeds:
+        - https://simonwillison.net/atom/everything/
+        - https://www.oneusefulthing.org/feed
+        - https://interconnected.org/home/feed
+        - https://www.latent.space/feed
+        - https://huggingface.co/blog/feed.xml
+        - https://hnrss.org/frontpage?points=300
+      feed_max_age_days: 30
+      facets:
+        domaine: {pool: ai_domains, strategy: bag}
+      verbalized: true
+    instructions: |
+      Expose une idée de projet innovante rendue possible par des modèles ou
+      outils d'IA sortis il y a moins d'un mois (vérifie les dates). Pars du
+      billet fourni comme inspiration si pertinent, croise avec le domaine
+      tiré. Décris : l'idée, pourquoi c'est faisable maintenant (quel modèle ou
+      outil, quelle capacité nouvelle), une esquisse d'architecture en 3-4
+      étapes, et une première étape faisable en un week-end. Lecteur :
+      développeur à l'aise avec les agents et Claude Code.
+
+  expression:
+    label: L'expression du jour
+    probability: 0.5
+    words: 110
+    seed:
+      provider: dico2rue
+    instructions: |
+      Présente l'expression tirée de dico2rue : sens, exemple d'usage, et si
+      tu en trouves une trace fiable, son origine ou son contexte (WebSearch).
+      N'invente jamais d'étymologie ; si l'origine est inconnue, dis-le avec
+      humour. Termine par une phrase d'exemple inédite que le lecteur pourrait
+      placer dans la journée. La source principale est la page dico2rue.
+
+  cuisine:
+    label: En cuisine
+    probability: 0.33
+    subtypes:
+      recette:
+        weight: 2
+        words: 230
+        seed:
+          facets:
+            cuisine: {pool: cuisines, strategy: bag}
+            ingredient: {pool: seasonal, strategy: recency}
+          verbalized: true
+        instructions: |
+          Propose UNE recette à tester, adaptée à un cuisinier débutant
+          (≤ 45 min actives, matériel de base, ingrédients trouvables à
+          Bruxelles), inspirée de la cuisine et/ou de l'ingrédient de saison
+          tirés. Base-toi sur une vraie recette publiée (blog, site de
+          référence) et cite-la. Mets la liste des ingrédients et les étapes
+          clés dans un bloc :::recette … ::: et l'erreur classique à éviter
+          dans un bloc :::tip … :::.
+      astuce:
+        weight: 1
+        words: 160
+        seed:
+          facets:
+            technique: {pool: cooking_techniques, strategy: bag}
+        instructions: |
+          Donne une astuce ou un principe de base de cuisine autour de la
+          technique tirée : le pourquoi (un peu de science si possible), le
+          comment, et un exercice simple pour pratiquer cette semaine. Appuie
+          -toi sur des sources fiables (Serious Eats, Kenji López-Alt, Le
+          Cordon Bleu, blogs de chefs…).
+
+  voyage:
+    label: Ailleurs
+    probability: 0.33
+    words: 200
+    seed:
+      angle: true
+    subtypes:
+      lieu:
+        weight: 1
+        seed:
+          facets:
+            region: {pool: regions, strategy: bag}
+            echelle: {values: [une ville méconnue, une vallée, une île, un désert, un massif montagneux, un fleuve et ses rives, une route mythique, un village], strategy: uniform}
+          verbalized: true
+        instructions: |
+          Présente un lieu précis et peu connu du grand public occidental dans
+          la région tirée, à l'échelle tirée. Ce qui le rend unique, comment
+          on y va, la meilleure saison, un détail sensoriel marquant. Évite
+          les destinations sur-médiatisées.
+      culture:
+        weight: 1
+        seed:
+          facets:
+            region: {pool: regions, strategy: bag}
+            theme: {values: [un rite de passage, une fête, une manière de manger ensemble, une langue ou un système d'écriture, un artisanat, une croyance, un rapport au temps, une forme d'habitat, un jeu ou sport traditionnel, une tradition musicale ou orale], strategy: bag}
+          verbalized: true
+        instructions: |
+          Présente un aspect d'une culture non occidentale de la région tirée,
+          autour du thème tiré. Nuance, respect, pas d'exotisme de carte
+          postale : explique le sens pour les gens concernés, avec sources
+          (ethnographie, médias locaux, Wikipédia en dernier recours).
+      aventure:
+        weight: 1
+        seed:
+          feeds:
+            - https://www.bikepacking.com/feed/
+            - https://www.alastairhumphreys.com/feed/
+            - https://explorersweb.com/feed/
+            - https://www.adventure-journal.com/feed/
+            - https://www.outsideonline.com/feed/
+            - https://www.atlasobscura.com/feeds/latest
+          feed_max_age_days: 120
+          facets:
+            discipline: {pool: adventure_disciplines, strategy: bag}
+        instructions: |
+          Présente une idée d'aventure sportive originale quelque part dans le
+          monde, basée sur un récit de blog réel (le billet tiré, ou un autre
+          trouvé via WebSearch sur la discipline tirée). Itinéraire, durée,
+          niveau requis, budget approximatif, et la « microaventure » version
+          Belgique pour s'y préparer.
+
+  musique:
+    label: Casque sur les oreilles
+    probability: 0.2
+    words: 200
+    seed:
+      angle: true
+    subtypes:
+      genre:
+        weight: 1
+        seed:
+          facets:
+            genre: {pool: music_genres, strategy: bag}
+        instructions: |
+          Présente le genre musical tiré (peu connu) : origine, son
+          caractéristique, contexte social, 2-3 artistes et 3 morceaux ou
+          albums à écouter avec liens (Bandcamp, YouTube, Spotify…).
+      mouvement:
+        weight: 1
+        seed:
+          facets:
+            famille: {values: [rap, rock, electro, drum and bass], strategy: bag}
+            decennie: {values: [années 60, années 70, années 80, années 90, années 2000, années 2010, années 2020], strategy: uniform}
+          verbalized: true
+        instructions: |
+          Présente un mouvement, une scène ou un courant de la famille tirée,
+          ancré dans la décennie tirée et dans un lieu précis (ville, label,
+          club, radio). Artistes clés, ce qu'il a changé, héritage aujourd'hui,
+          3 morceaux à écouter avec liens.
+
+  style:
+    label: Dégaine
+    probability: 0.2
+    words: 170
+    seed:
+      facets:
+        sous_culture: {pool: subcultures, strategy: bag}
+      angle: true
+    instructions: |
+      Présente une tendance ou un code vestimentaire de la sous-culture tirée
+      (underground, raver, punk…) : pièces clés, origine, ce que ça signifie,
+      comment ça évolue aujourd'hui, et 1-2 adresses ou marques
+      indépendantes (idéalement à Bruxelles ou en ligne). Sources : médias
+      spécialisés (Dazed, i-D, Highsnobiety, fanzines, archives).
+
+  making:
+    label: Fait main
+    probability: 0.2
+    words: 190
+    seed:
+      facets:
+        technique: {pool: crafts, strategy: bag}
+    instructions: |
+      Présente un projet de making accessible autour de la technique tirée :
+      un premier projet concret réalisable en un week-end, matériel et budget,
+      étapes principales, où apprendre (tuto vidéo ou blog précis), et où
+      s'équiper ou trouver un atelier à Bruxelles si possible.

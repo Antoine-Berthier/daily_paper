@@ -1,0 +1,83 @@
+{% extends "_base.html.j2" %}
+{% block title %}{{ e.name }} — {{ e.date_label }}{% endblock %}
+{% block body %}
+<header class="masthead">
+  <h1><a href="/">{{ e.name }}</a></h1>
+  <div class="meta">{{ e.date_label }} · n° {{ e.number }} · {{ e.articles|length }} article{{ "s" if e.articles|length > 1 }}</div>
+</header>
+<nav class="toc">{% for a in e.articles %}<span><a href="#{{ a.id }}">{{ a.label }}</a></span>{% endfor %}</nav>
+
+{% for a in e.articles %}
+<article id="{{ a.id }}" data-id="{{ a.id }}">
+  <div class="kicker">{{ a.label }}</div>
+  <h2>{{ a.title }}</h2>
+  {% if a.chapo %}<p class="chapo">{{ a.chapo }}</p>{% endif %}
+  {% if a.image_file %}
+  <figure>
+    <img src="{{ a.image_file }}" alt="{{ a.image.alt or a.title }}" loading="lazy">
+    {% if a.image.credit or a.image_source %}<figcaption>{{ a.image.credit or "" }}{% if a.image_source %} · <a href="{{ a.image_source }}" target="_blank" rel="noopener">source</a>{% endif %}</figcaption>{% endif %}
+  </figure>
+  {% endif %}
+  <div class="body">{{ a.body_markdown | md | safe }}</div>
+  {% if a.deep_dive %}
+  <div class="deep">
+    <h4>Pour aller plus loin</h4>
+    <ul>{% for d in a.deep_dive %}<li><a href="{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% if d.why %} <span class="why">— {{ d.why }}</span>{% endif %}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+  {% if a.sources %}<p class="sources">Sources : {% for s in a.sources %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  <div class="fb">
+    <button data-rate="1" title="J'ai aimé">👍</button>
+    <button data-rate="-1" title="Pas pour moi">👎</button>
+    <button data-note title="Laisser un commentaire">Commenter</button>
+    <div class="fb-note">
+      <textarea placeholder="Plus court, autre ton, plus de ce genre de sujets, moins de…"></textarea>
+      <div class="row"><button class="btn primary" data-send>Envoyer</button></div>
+    </div>
+  </div>
+</article>
+{% endfor %}
+
+<section class="end" id="end">
+  <h3>C'est tout pour aujourd'hui.</h3>
+  <p>Un avis sur l'édition entière (nombre d'articles, ton, rubriques à ajouter ou retirer) ? Il sera appliqué avant la prochaine.</p>
+  <textarea id="edition-note" placeholder="Ex. : ajoute une rubrique BD, moins d'actu internationale, articles plus courts…"></textarea>
+  <p style="text-align:right;margin-top:8px"><button class="btn primary" id="edition-send">Envoyer</button> <a class="btn" href="/" style="text-decoration:none">Toutes les éditions</a></p>
+</section>
+{% endblock %}
+{% block script %}
+<script>
+const EDITION = {{ e.id | tojson }};
+document.querySelectorAll("article").forEach(art => {
+  const id = art.dataset.id;
+  art.querySelectorAll("[data-rate]").forEach(b => b.addEventListener("click", async () => {
+    const on = !b.classList.contains("on");
+    art.querySelectorAll("[data-rate]").forEach(x => x.classList.remove("on"));
+    if (on) b.classList.add("on");
+    const ok = await api("/api/feedback", {edition: EDITION, article: id, rating: on ? Number(b.dataset.rate) : 0});
+    toast(ok ? "Merci, noté" : "Serveur injoignable");
+  }));
+  const box = art.querySelector(".fb-note");
+  art.querySelector("[data-note]").addEventListener("click", () => { box.classList.toggle("open"); box.querySelector("textarea").focus(); });
+  art.querySelector("[data-send]").addEventListener("click", async () => {
+    const ta = box.querySelector("textarea"); if (!ta.value.trim()) return;
+    const ok = await api("/api/feedback", {edition: EDITION, article: id, text: ta.value.trim()});
+    if (ok) { ta.value = ""; box.classList.remove("open"); }
+    toast(ok ? "Commentaire envoyé" : "Serveur injoignable");
+  });
+  art.querySelectorAll("a[href^='http']").forEach(a => a.addEventListener("click", () => {
+    navigator.sendBeacon && navigator.sendBeacon("/api/click", JSON.stringify({edition: EDITION, article: id, url: a.href}));
+  }));
+});
+document.getElementById("edition-send").addEventListener("click", async () => {
+  const ta = document.getElementById("edition-note"); if (!ta.value.trim()) return;
+  const ok = await api("/api/feedback", {edition: EDITION, text: ta.value.trim()});
+  if (ok) ta.value = "";
+  toast(ok ? "Merci, ce sera pris en compte" : "Serveur injoignable");
+});
+let marked = false;
+new IntersectionObserver(entries => {
+  if (!marked && entries.some(x => x.isIntersecting)) { marked = true; api("/api/read", {edition: EDITION}); }
+}).observe(document.getElementById("end"));
+</script>
+{% endblock %}

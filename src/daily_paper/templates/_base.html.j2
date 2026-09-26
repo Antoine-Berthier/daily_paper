@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Daily Paper{% endblock %}</title>
+<style>
+:root {
+  --bg: #faf8f4; --surface: #ffffff; --ink: #1d1b18; --muted: #6b665d; --faint: #a39d92;
+  --rule: #e6e1d7; --accent: #b4441f; --accent-soft: #f6e6de;
+  --tip: #e7f1e8; --tip-ink: #2f6b3a; --note: #e8eef6; --note-ink: #2c5282;
+  --warn: #fbeee0; --warn-ink: #9a4d0b; --recipe: #f4efe3; --recipe-ink: #6b5418;
+  --serif: "Charter", "Bitstream Charter", "Iowan Old Style", "Sitka Text", Cambria, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161513; --surface: #1e1c1a; --ink: #ebe6dc; --muted: #a8a195; --faint: #6f695f;
+    --rule: #34312c; --accent: #e8825c; --accent-soft: #3a2a22;
+    --tip: #1f2d22; --tip-ink: #9fd3a9; --note: #1f2735; --note-ink: #a7c4ec;
+    --warn: #33271b; --warn-ink: #f0b37a; --recipe: #2d281d; --recipe-ink: #e3cc8f;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.65 var(--serif); }
+.page { max-width: 680px; margin: 0 auto; padding: 40px 16px 80px; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+.masthead { text-align: center; border-bottom: 3px double var(--rule); padding-bottom: 18px; margin-bottom: 36px; }
+.masthead h1 { font: 700 44px/1.1 var(--serif); letter-spacing: -0.01em; margin: 0; }
+.masthead h1 a { color: inherit; text-decoration: none; }
+.masthead .meta { font: 13px/1.4 var(--sans); color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.toc { font: 14px/1.6 var(--sans); color: var(--muted); margin: -12px 0 36px; text-align: center; }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--accent); }
+.toc span + span::before { content: "·"; margin: 0 8px; color: var(--faint); }
+article { margin: 0 0 56px; }
+article + article { border-top: 1px solid var(--rule); padding-top: 44px; }
+.kicker { font: 600 12px/1 var(--sans); color: var(--accent); text-transform: uppercase; letter-spacing: .12em; }
+article h2 { font: 700 30px/1.2 var(--serif); margin: 10px 0 10px; letter-spacing: -0.01em; }
+.chapo { font-size: 20px; color: var(--muted); font-style: italic; margin: 0 0 22px; }
+figure { margin: 0 0 22px; }
+figure img { width: 100%; max-height: 420px; object-fit: cover; border-radius: 4px; display: block; background: var(--rule); }
+figcaption { font: 12px/1.4 var(--sans); color: var(--faint); margin-top: 6px; }
+.body p { margin: 0 0 14px; }
+.body ul, .body ol { padding-left: 22px; margin: 0 0 14px; }
+.body li { margin-bottom: 4px; }
+.body h3 { font: 700 20px/1.3 var(--serif); margin: 22px 0 8px; }
+.body blockquote { margin: 0 0 14px; padding-left: 16px; border-left: 3px solid var(--rule); color: var(--muted); }
+.box { border-radius: 6px; padding: 14px 18px 4px; margin: 18px 0; font-size: 16.5px; }
+.box-label { font: 700 11px/1 var(--sans); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 8px; }
+.box-tip { background: var(--tip); } .box-tip .box-label { color: var(--tip-ink); }
+.box-note { background: var(--note); } .box-note .box-label { color: var(--note-ink); }
+.box-attention { background: var(--warn); } .box-attention .box-label { color: var(--warn-ink); }
+.box-recette { background: var(--recipe); } .box-recette .box-label { color: var(--recipe-ink); }
+.deep { font: 15px/1.5 var(--sans); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 18px; margin: 20px 0 12px; }
+.deep h4 { font: 700 11px/1 var(--sans); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 10px; }
+.deep ul { list-style: none; padding: 0; margin: 0; }
+.deep li { margin: 0 0 8px; }
+.deep .why { color: var(--muted); }
+.sources { font: 12.5px/1.5 var(--sans); color: var(--faint); margin: 8px 0 0; }
+.sources a { color: var(--muted); }
+.fb { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; font: 13px/1 var(--sans); color: var(--faint); }
+.fb button, .btn { font: 13px/1 var(--sans); background: transparent; color: var(--muted); border: 1px solid var(--rule); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.fb button:hover, .btn:hover { border-color: var(--accent); color: var(--accent); }
+.fb button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { color: #fff; filter: brightness(1.08); }
+textarea { width: 100%; min-height: 70px; font: 15px/1.5 var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; }
+textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.fb-note { display: none; width: 100%; margin-top: 6px; }
+.fb-note.open { display: block; }
+.fb-note .row { display: flex; justify-content: flex-end; margin-top: 6px; }
+.end { border-top: 3px double var(--rule); padding-top: 28px; font: 15px/1.5 var(--sans); color: var(--muted); }
+.end h3 { font: 700 18px/1.3 var(--serif); color: var(--ink); margin: 0 0 6px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--bg); font: 14px/1 var(--sans); padding: 10px 16px; border-radius: 999px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: .92; }
+@media (max-width: 520px) {
+  body { font-size: 17px; }
+  .page { padding-top: 24px; }
+  .masthead h1 { font-size: 34px; }
+  article h2 { font-size: 25px; }
+  .chapo { font-size: 18px; }
+}
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+<div class="page">
+{% block body %}{% endblock %}
+</div>
+<div class="toast" id="toast"></div>
+<script>
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800);
+}
+async function api(path, body) {
+  try {
+    const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
+    return r.ok ? await r.json() : null;
+  } catch (e) { return null; }
+}
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>
