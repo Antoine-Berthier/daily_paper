@@ -23,6 +23,9 @@ _yaml = YAML()
 _yaml.preserve_quotes = True
 _yaml.width = 4096
 _yaml.indent(mapping=2, sequence=4, offset=2)
+_pool_yaml = YAML()  # pools are top-level lists: "- value" flush left
+_pool_yaml.width = 4096
+_pool_yaml.indent(mapping=2, sequence=2, offset=0)
 
 ESCALATIONS: list[str] = []  # filled by the `escalate` tool during an agent run
 
@@ -38,7 +41,7 @@ def _load(path: Path) -> Any:
 
 def _dump(path: Path, data: Any) -> None:
     buf = io.StringIO()
-    _yaml.dump(data, buf)
+    (_pool_yaml if path.parent == config.POOLS_DIR else _yaml).dump(data, buf)
     path.write_text(buf.getvalue(), encoding="utf-8")
 
 

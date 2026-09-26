@@ -63,7 +63,7 @@ ARTICLE_SCHEMA: dict[str, Any] = {
         },
         "deep_dive": {
             "type": "array",
-            "description": "1 à 3 liens pour creuser le sujet",
+            "description": "1 à 3 liens pour creuser le sujet, DIFFÉRENTS des sources citées : format long, vidéo, podcast, livre, tuto, carte…",
             "items": {
                 "type": "object",
                 "required": ["title", "url"],

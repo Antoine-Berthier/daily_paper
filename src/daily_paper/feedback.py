@@ -169,7 +169,10 @@ def escalate(request: str, settings: dict[str, Any]) -> str:
         return f"escalade en attente (arbre git non propre) : {request[:80]}"
     base = _git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
     branch = f"feedback/{datetime.now():%Y%m%d-%H%M}-{_slug(request)}"
-    _git("checkout", "-b", branch, check=True)
+    created = _git("checkout", "-b", branch)
+    if created.returncode != 0:
+        log.warning("escalade impossible : %s", created.stderr.strip())
+        return f"escalade impossible (git) : {request[:80]}"
     try:
         proc = subprocess.run(
             ["claude", "-p", ESCALATION_PROMPT.format(request=request),

@@ -50,8 +50,8 @@ topics:
       L'importance se mesure à la couverture : un sujet repris par plusieurs
       rédactions indépendantes dans les titres fournis est prioritaire.
       Ignore faits divers, sport (sauf événement historique), people et météo.
-      Chaque brève : un titre court en gras suivi de 2-3 phrases factuelles, et
-      au moins un lien vers l'article source. Ouvre chaque article (WebFetch)
+      Chaque brève : un intertitre court en `### Titre`, puis 2-3 phrases
+      factuelles avec au moins un lien vers l'article source. Ouvre chaque article (WebFetch)
       avant d'en parler. Si un sujet déjà traité récemment a connu un
       développement réel, tu peux en faire la suite (indique continuity_of).
 

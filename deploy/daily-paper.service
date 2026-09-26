@@ -1,0 +1,15 @@
+# Alternative Linux (hors WSL) : serveur + parution automatique en service utilisateur.
+#   cp deploy/daily-paper.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now daily-paper
+[Unit]
+Description=Daily Paper (serveur local + planificateur)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/daily_paper
+ExecStart=%h/.local/bin/uv run --all-extras daily-paper serve
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=default.target

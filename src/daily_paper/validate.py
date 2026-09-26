@@ -90,7 +90,8 @@ def check(
     if not body_links:
         problems.append("aucun lien dans le texte : cite tes sources en liens markdown.")
     article["sources"] = sources
-    article["deep_dive"] = [d for d in deep if status[d["url"]][0]]
+    cited = {*body_links, *(s["url"] for s in sources)}
+    article["deep_dive"] = [d for d in deep if status[d["url"]][0] and d["url"] not in cited]
     article["unverified"] = sorted(u for u, (ok, why) in status.items() if ok and why != "ok")
 
     dup = duplicate_of(article, topic, history)
