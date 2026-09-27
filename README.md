@@ -43,7 +43,7 @@ uv run daily-paper status
 | actu | Actualités (Bruxelles, Belgique, monde si majeur) | toujours | titres RSS recoupés (importance = nombre de rédactions) |
 | genai | IA générative | toujours, peut sauter | seulement si annonce majeure, sinon rien |
 | blog_ia | Fabriquer avec l'IA | 1/3 | billet tiré dans des flux IA (< 30 j) × domaine (sac) × échantillonnage verbalisé |
-| expression | L'expression du jour | 1/2 | lettre et page au hasard, filtre mots-clés + votes, tirage pondéré — sans LLM |
+| expression | L'expression du jour | 1/2 | lettre et page au hasard, entrée jamais publiée ; affichée telle quelle (mot + définition), sans LLM |
 | cuisine | recette débutant / astuce | 1/3 | cuisine du monde (sac) × légume de saison (récence) ; technique (sac) |
 | voyage | lieu / culture / aventure | 1/3 | 48 régions (sac) × échelle ou thème ; billet de blog d'aventure × discipline ; angle |
 | musique | genre peu connu / mouvement | 1/5 | 100+ genres (sac) ; famille × décennie × échantillonnage verbalisé ; angle |

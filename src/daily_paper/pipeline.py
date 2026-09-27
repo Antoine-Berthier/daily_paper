@@ -41,9 +41,24 @@ def _edition_id(st: dict[str, Any], today: date) -> str:
     return eid
 
 
+def _verbatim(art: ArticlePlan) -> dict[str, Any] | None:
+    """An article made of the drawn entry as is (topics with `writer: none`)."""
+    exp = art.seed.get("expression")
+    if not exp:
+        log.warning("[%s] aucune entrée tirée (dico2rue injoignable ?)", art.topic)
+        return None
+    return {
+        "kind": "verbatim", "title": exp["expression"], "definition": exp["definition"], "example": exp["example"],
+        "sources": [{"title": "dico2rue", "url": exp["url"]}], "subject": exp["expression"],
+        "summary": exp["definition"][:200], "entities": [],
+    }
+
+
 def _write_one(
     art: ArticlePlan, plan: planner.EditionPlan, settings: dict[str, Any], history: list[dict[str, Any]], today: date
 ) -> tuple[dict[str, Any] | None, float]:
+    if art.spec.get("writer") == "none":
+        return _verbatim(art), 0.0
     target = int(art.spec.get("words") or settings["words"])
     note, cost = None, 0.0
     for attempt in range(int(settings["writer"]["retries"]) + 1):
@@ -61,8 +76,7 @@ def _write_one(
                 return None, cost
             note = "Cette rubrique n'est pas optionnelle : écris l'article (skip = false)."
             continue
-        imposed = (art.seed.get("expression") or {}).get("expression")
-        out, problems = validate.check(out, art.topic, target, history, required_subject=imposed)
+        out, problems = validate.check(out, art.topic, target, history)
         if not problems:
             log.info("[%s] ok — %s (%.2f $)", art.topic, out["title"], cost)
             return out, cost
@@ -137,7 +151,8 @@ def run(*, force: bool = False, only: list[str] | None = None, auto: bool = Fals
     folder.mkdir(parents=True, exist_ok=True)
     articles = []
     for art, out in written:
-        _attach_image(out, folder, art.id)
+        if out.get("kind") != "verbatim":
+            _attach_image(out, folder, art.id)
         articles.append({**out, "id": art.id, "topic": art.topic, "subtype": art.subtype,
                          "label": art.spec.get("label", art.topic), "seed": art.seed})
     edition = {"id": eid, "name": settings.get("name", "Daily Paper"), "date": today.isoformat(),

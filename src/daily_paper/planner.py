@@ -9,7 +9,7 @@ brief. Mechanisms (see config/topics.yaml for how each topic uses them):
 * shuffle bags       — every value of a pool comes out once before any repeats;
 * recency weighting  — weight = 1 − exp(−days since last use / τ);
 * feed seeds         — a random, never-used recent post from a curated feed;
-* providers          — e.g. a dico2rue expression picked mechanically (filters + weighted draw);
+* providers          — e.g. a random, never-published dico2rue entry;
 * verbalized sampling— the model lists candidates with probabilities and must
   take the rank drawn here, in the tail of its own distribution;
 * angles             — a random writing angle, so form varies as well as content;
@@ -177,7 +177,7 @@ def draw_seed(
             seed["source"] = item
     if spec.get("provider") == "dico2rue":
         used = {h.get("subject") for h in history if h.get("topic") == plan.topic}
-        item = web.dico2rue_expression(used, config.pool("dico2rue_blocklist"), rng)
+        item = web.dico2rue_expression(used, rng)
         if item:
             seed["expression"] = item
     if spec.get("verbalized"):

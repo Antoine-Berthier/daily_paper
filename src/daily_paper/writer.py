@@ -113,12 +113,6 @@ def _seed_text(seed: dict[str, Any]) -> str:
             "\n  Pars de ce billet si le sujet colle à la rubrique ; sinon sers-t'en comme tremplin"
             " vers un sujet voisin, ou ignore-le."
         )
-    if exp := seed.get("expression"):
-        lines.append(
-            f"- expression imposée (tirée au hasard dans dico2rue, ne la change pas) : « {exp['expression']} »"
-            f"\n  définition : {exp['definition']}\n  exemple : {exp['example']}\n  page : {exp['url']}"
-            "\n  Mets son texte exact dans subject."
-        )
     if angle := seed.get("angle"):
         lines.append(f"- angle d'écriture imposé : {angle}")
     if rank := seed.get("verbalized_rank"):

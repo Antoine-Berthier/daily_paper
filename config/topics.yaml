@@ -11,6 +11,7 @@
 #   instructions  consignes de recherche et d'écriture
 #   headlines     flux RSS dont les titres récents sont fournis à l'agent
 #   seed          générateur de diversité (voir ci-dessous)
+#   writer        none → pas d'appel LLM, l'entrée tirée est affichée telle quelle
 #   subtypes      variantes tirées en « sac mélangé » selon leur weight ;
 #                 leurs instructions/seed complètent ceux de la rubrique
 #
@@ -20,7 +21,8 @@
 #   feeds         liste de flux ; un billet récent est tiré au hasard et sert
 #                 de point de départ (source réelle garantie)
 #   feed_max_age_days
-#   provider      générateur spécifique (dico2rue)
+#   provider      générateur spécifique (dico2rue : lettre et page au hasard,
+#                 puis une entrée jamais publiée tirée au hasard)
 #   verbalized    true → l'agent liste des candidats avec leur probabilité et
 #                 doit prendre celui du rang tiré au hasard (dans la queue)
 #   angle         true → un angle d'écriture est tiré dans pools/angles.yaml
@@ -107,15 +109,9 @@ topics:
   expression:
     label: L'expression du jour
     probability: 0.5
-    words: 110
+    writer: none          # pas de rédaction : le mot et sa définition sont affichés tels quels
     seed:
       provider: dico2rue
-    instructions: |
-      Présente l'expression imposée (tirée par le code dans dico2rue) : sens, exemple d'usage, et si
-      tu en trouves une trace fiable, son origine ou son contexte (WebSearch).
-      N'invente jamais d'étymologie ; si l'origine est inconnue, dis-le avec
-      humour. Termine par une phrase d'exemple inédite que le lecteur pourrait
-      placer dans la journée. La source principale est la page dico2rue.
 
   cuisine:
     label: En cuisine

@@ -11,6 +11,11 @@
 <article id="{{ a.id }}" data-id="{{ a.id }}">
   <div class="kicker">{{ a.label }}</div>
   <h2>{{ a.title }}</h2>
+  {% if a.kind == "verbatim" %}
+  <p class="definition">{{ a.definition }}</p>
+  {% if a.example %}<p class="example">« {{ a.example }} »</p>{% endif %}
+  <p class="sources"><a href="{{ a.sources[0].url }}" target="_blank" rel="noopener">dico2rue</a></p>
+  {% else %}
   {% if a.chapo %}<p class="chapo">{{ a.chapo }}</p>{% endif %}
   {% if a.image_file %}
   <figure>
@@ -26,6 +31,7 @@
   </div>
   {% endif %}
   {% if a.sources %}<p class="sources">Sources : {% for s in a.sources %}<a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  {% endif %}
   <div class="fb">
     <button data-rate="1" title="J'ai aimé">👍</button>
     <button data-rate="-1" title="Pas pour moi">👎</button>

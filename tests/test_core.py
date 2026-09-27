@@ -155,22 +155,19 @@ def _word(word, definition="une définition correcte", up=20, down=2, pid="1"):
             "votesagainst": str(down), "pageId": pid, "pageSlug": "x"}
 
 
-def test_pick_expression_is_mechanical_and_filtered():
-    blocklist = config.pool("dico2rue_blocklist")
-    words = [
-        _word("Nique ta mère", "insulte"),
-        _word("Mc crado", "Mc Donald"),
-        _word("Peu voté", up=1),
-        _word("Déjà vu"),
-        _word("Avoir la taupe au guichet", "être pressé d'aller aux toilettes"),
-    ]
+def test_pick_expression_skips_published_entries():
+    words = [_word("Mc crado", "Mc Donald"), _word("Déjà vu")]
     rng = random.Random(0)
-    picks = Counter(web.pick_expression(words, {"Déjà vu"}, blocklist, rng)["expression"] for _ in range(300))
-    assert set(picks) == {"Mc crado", "Avoir la taupe au guichet"}
-    assert web.pick_expression([_word("Salope")], set(), blocklist, rng) is None
+    assert {web.pick_expression(words, {"Déjà vu"}, rng)["expression"] for _ in range(50)} == {"Mc crado"}
+    assert web.pick_expression(words, {"Déjà vu", "Mc crado"}, rng) is None
 
 
-def test_imposed_subject_is_enforced():
-    art = {"title": "t", "subject": "Autre chose", "body_markdown": "mot " * 40, "sources": [], "entities": []}
-    _, problems = validate.check(art, "expression", 110, [], required_subject="Mc crado")
-    assert any("imposé" in p for p in problems)
+def test_verbatim_topic_needs_no_writer():
+    art = planner.ArticlePlan(id="a", topic="expression", subtype=None, spec={"writer": "none"},
+                              seed={"expression": {"expression": "Mc crado", "definition": "Mc Donald",
+                                                   "example": "", "url": "https://www.dico2rue.com/x/"}})
+    out, cost = pipeline._write_one(art, None, config.settings(), [], date(2026, 9, 28))
+    assert cost == 0 and out["title"] == "Mc crado" and out["kind"] == "verbatim"
+    html = render.render_edition({"id": "2026-09-28", "name": "D", "date_label": "L", "number": 1,
+                                  "articles": [{**out, "id": "a", "label": "L'expression du jour"}]})
+    assert "Mc Donald" in html and "dico2rue" in html
