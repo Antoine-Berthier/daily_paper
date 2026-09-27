@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import pytest
 
-from daily_paper import config, customize, pipeline, planner, render, state, validate, web
+from daily_paper import config, customize, pipeline, planner, quota, render, state, validate, web
 
 
 def fresh():
@@ -171,3 +171,22 @@ def test_verbatim_topic_needs_no_writer():
     html = render.render_edition({"id": "2026-09-28", "name": "D", "date_label": "L", "number": 1,
                                   "articles": [{**out, "id": "a", "label": "L'expression du jour"}]})
     assert "Mc Donald" in html and "dico2rue" in html
+
+
+# ---------------------------------------------------------------- quota
+
+
+def test_quota_usage_delta_and_reset():
+    before = {"five_hour": {"utilization": 0.26, "resetsAt": 1}, "seven_day": {"utilization": 0.69, "resetsAt": 9}}
+    after = {"five_hour": {"utilization": 0.04, "resetsAt": 2}, "seven_day": {"utilization": 0.71, "resetsAt": 9}}
+    used = quota.usage(before, after)
+    assert used["seven_day"] == {"before": 69, "after": 71, "points": 2, "reset": False}
+    assert used["five_hour"]["reset"] and used["five_hour"]["points"] == 4
+    assert quota.usage(None, after) is None
+
+
+def test_footer_shows_cost_and_quota():
+    html = render.render_edition({"id": "2026-09-28", "name": "D", "date_label": "L", "number": 1, "articles": [],
+                                  "cost_usd": 0.654, "quota": {"five_hour": {"before": 26, "after": 29, "points": 3, "reset": False},
+                                                               "seven_day": {"before": 69, "after": 69, "points": 0, "reset": False}}})
+    assert "0,65 $" in html and "session 5 h : 3 % du quota (26 → 29 %)" in html and "semaine : &lt; 1 % du quota" in html

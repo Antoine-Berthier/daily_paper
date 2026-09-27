@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from . import config, notify, planner, render, state, validate, web, writer
+from . import config, notify, planner, quota, render, state, validate, web, writer
 from .planner import ArticlePlan
 
 log = logging.getLogger("daily_paper")
@@ -131,9 +131,13 @@ def run(*, force: bool = False, only: list[str] | None = None, auto: bool = Fals
     for a in plan.articles:
         log.info("  %s → %s", a.topic, json.dumps(a.seed, ensure_ascii=False)[:300])
 
+    quota_before = quota.snapshot()
     with ThreadPoolExecutor(int(settings["writer"]["parallel"])) as pool:
         results = list(pool.map(lambda a: _write_one(a, plan, settings, history, today), plan.articles))
     total_cost = sum(c for _, c in results)
+    used = quota.usage(quota_before, quota.snapshot())
+    if used:
+        log.info("quota : %s", ", ".join(f"{w} +{u['points']} pts ({u['before']} → {u['after']} %)" for w, u in used.items()))
     written = [(a, out) for a, (out, _) in zip(plan.articles, results) if out]
     if not written:
         log.error("aucun article produit (%.2f $ dépensés)", total_cost)
@@ -143,7 +147,8 @@ def run(*, force: bool = False, only: list[str] | None = None, auto: bool = Fals
         eid = _edition_id(st, today)
         number = len(st["editions"]) + 1
         st["editions"][eid] = {"date": today.isoformat(), "created_at": state.now_iso(), "read_at": None,
-                               "number": number, "topics": [a.topic for a, _ in written], "cost_usd": round(total_cost, 3)}
+                               "number": number, "topics": [a.topic for a, _ in written], "cost_usd": round(total_cost, 3),
+                               "quota": used}
         for key in ("credits", "bags", "last_used"):
             st[key] = plan.state[key]
 
@@ -157,7 +162,7 @@ def run(*, force: bool = False, only: list[str] | None = None, auto: bool = Fals
                          "label": art.spec.get("label", art.topic), "seed": art.seed})
     edition = {"id": eid, "name": settings.get("name", "Daily Paper"), "date": today.isoformat(),
                "date_label": writer.date_fr(today).capitalize(), "number": number,
-               "articles": articles, "cost_usd": round(total_cost, 3)}
+               "articles": articles, "cost_usd": round(total_cost, 3), "quota": used}
     (folder / "edition.json").write_text(json.dumps(edition, ensure_ascii=False, indent=1), encoding="utf-8")
     (folder / "index.html").write_text(render.render_edition(edition), encoding="utf-8")
 

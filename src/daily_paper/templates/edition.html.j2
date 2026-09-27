@@ -49,6 +49,14 @@
   <p>Un avis sur l'édition entière (nombre d'articles, ton, rubriques à ajouter ou retirer) ? Il sera appliqué avant la prochaine.</p>
   <textarea id="edition-note" placeholder="Ex. : ajoute une rubrique BD, moins d'actu internationale, articles plus courts…"></textarea>
   <p style="text-align:right;margin-top:8px"><button class="btn primary" id="edition-send">Envoyer</button> <a class="btn" href="/" style="text-decoration:none">Toutes les éditions</a></p>
+  {% if e.cost_usd is defined %}
+  <p class="cost" title="Coût équivalent API calculé par Claude Code. Quotas : écart d'utilisation de ton abonnement avant/après la rédaction (résolution 1 point ; inclut toute autre utilisation de Claude pendant ce temps).">
+    Coût de cette édition : {{ ("%.2f"|format(e.cost_usd)).replace(".", ",") }} $ (équivalent API)
+    {%- if e.quota %}{% for w, label in [("five_hour", "session 5 h"), ("seven_day", "semaine")] %}{% set u = e.quota[w] %}{% if u %}
+    · {{ label }} : {{ "< 1" if u.points == 0 else ("≥ " if u.reset else "") ~ u.points }} % du quota ({{ u.before }} → {{ u.after }} %{{ ", fenêtre réinitialisée" if u.reset }})
+    {%- endif %}{% endfor %}{% endif %}
+  </p>
+  {% endif %}
 </section>
 {% endblock %}
 {% block script %}
