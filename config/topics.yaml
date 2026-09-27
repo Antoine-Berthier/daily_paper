@@ -113,6 +113,25 @@ topics:
     seed:
       provider: dico2rue
 
+  puzzle:
+    label: Casse-tête
+    probability: 0.5
+    format: puzzle        # énoncé + fonction à écrire, testée dans la page
+    words: 170
+    seed:
+      facets:
+        famille: {pool: puzzle_families, strategy: bag}
+        niveau: {values: [échauffement, intermédiaire, costaud], strategy: uniform}
+    instructions: |
+      Invente un petit problème de logique à résoudre en écrivant une fonction
+      Python, dans la famille tirée et au niveau tiré. L'objectif est d'entraîner
+      le raisonnement (déduction, invariants, dénombrement, stratégie), pas la
+      technique de code : la solution doit tenir en moins de 30 lignes avec des
+      boucles, des conditions, des listes et des dictionnaires, sans bibliothèque.
+      Crée une variante originale (histoire, nombres, contrainte en plus) pour
+      que la réponse ne se trouve pas telle quelle en ligne. Cite dans l'énoncé
+      une page de référence sur la famille d'énigme (Wikipédia, blog de puzzles…).
+
   cuisine:
     label: En cuisine
     probability: 0.33

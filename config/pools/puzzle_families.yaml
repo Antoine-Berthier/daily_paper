@@ -1,0 +1,37 @@
+# Familles d'énigmes pour la rubrique puzzle (sac mélangé). Le rédacteur invente
+# une variante originale de la famille tirée : la difficulté est logique, le code simple.
+- chevaliers et fripons (qui ment, qui dit vrai)
+- énigme d'Einstein / grille de déduction
+- pesées avec une balance (fausse pièce)
+- traversée de rivière sous contraintes
+- pont et lampe de poche (temps minimal)
+- cruches d'eau (mesurer un volume)
+- cryptarithme (SEND + MORE = MONEY)
+- carré magique ou grille à contraintes
+- problème de Josèphe (élimination en cercle)
+- tours de Hanoï et variantes
+- invariant de parité (pièces, jetons, damier)
+- principe des tiroirs
+- jeu de Nim et positions gagnantes
+- chapeaux et prisonniers
+- allumettes — déplacer pour corriger une égalité
+- labyrinthe et plus court chemin sur une grille
+- coloriage de graphe / cartes
+- ordonnancement de tâches avec dépendances
+- tournoi et classement à partir de résultats partiels
+- suites logiques et motifs cachés
+- calendrier et jours de la semaine
+- angles et horloges
+- dominos sur un échiquier tronqué
+- lampes et interrupteurs (lights out)
+- ascenseur ou escalier — états atteignables
+- partage équitable et marchandage
+- menteurs autour d'une table ronde
+- rendez-vous et intervalles de temps
+- dénombrement de chemins sur une grille
+- anagrammes et mots contraints
+- enchères et votes — qui gagne selon la règle
+- les œufs et les étages (nombre minimal d'essais)
+- files d'attente et simulations pas à pas
+- codes secrets à la Mastermind
+- robots sur une grille et instructions

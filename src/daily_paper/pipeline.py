@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from . import config, notify, planner, quota, render, state, validate, web, writer
+from . import config, notify, planner, puzzle, quota, render, state, validate, web, writer
 from .planner import ArticlePlan
 
 log = logging.getLogger("daily_paper")
@@ -64,7 +64,7 @@ def _write_one(
     for attempt in range(int(settings["writer"]["retries"]) + 1):
         prompt = writer.build_prompt(art, settings, history, plan.articles, today, feedback_note=note)
         try:
-            out, c = writer.call_claude(prompt, settings)
+            out, c = writer.call_claude(prompt, settings, writer.schema_for(art.spec))
         except writer.WriterError as exc:
             log.warning("[%s] échec de rédaction (essai %d) : %s", art.topic, attempt + 1, exc)
             note = None
@@ -77,6 +77,9 @@ def _write_one(
             note = "Cette rubrique n'est pas optionnelle : écris l'article (skip = false)."
             continue
         out, problems = validate.check(out, art.topic, target, history)
+        if art.spec.get("format") == "puzzle" and not problems:
+            problems = puzzle.check_generated(out)
+            out["kind"] = "puzzle"
         if not problems:
             log.info("[%s] ok — %s (%.2f $)", art.topic, out["title"], cost)
             return out, cost
@@ -156,7 +159,7 @@ def run(*, force: bool = False, only: list[str] | None = None, auto: bool = Fals
     folder.mkdir(parents=True, exist_ok=True)
     articles = []
     for art, out in written:
-        if out.get("kind") != "verbatim":
+        if out.get("kind") not in ("verbatim", "puzzle"):
             _attach_image(out, folder, art.id)
         articles.append({**out, "id": art.id, "topic": art.topic, "subtype": art.subtype,
                          "label": art.spec.get("label", art.topic), "seed": art.seed})

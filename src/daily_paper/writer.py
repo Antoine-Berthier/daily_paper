@@ -97,6 +97,50 @@ def date_fr(d: date) -> str:
     return f"{JOURS[d.weekday()]} {d.day} {MOIS[d.month - 1]} {d.year}"
 
 
+_CASE = {
+    "type": "object",
+    "required": ["args", "expected"],
+    "properties": {
+        "args": {"type": "string", "description": "littéral Python du tuple d'arguments, ex. \"(3, [1, 2])\" ou \"()\""},
+        "expected": {"type": "string", "description": "littéral Python du résultat attendu, ex. \"[2, 1]\""},
+    },
+}
+
+PUZZLE_SCHEMA: dict[str, Any] = {
+    **ARTICLE_SCHEMA,
+    "required": ARTICLE_SCHEMA["required"] + ["function_name", "starter_code", "examples", "tests", "hints",
+                                              "explanation_markdown", "reference_solution"],
+    "properties": {
+        **ARTICLE_SCHEMA["properties"],
+        "body_markdown": {"type": "string", "description": "l'énoncé : histoire, règles précises, ce que la fonction reçoit et renvoie"},
+        "function_name": {"type": "string"},
+        "starter_code": {"type": "string", "description": "def <fonction>(...): avec docstring (entrées/sortie) et pass"},
+        "examples": {"type": "array", "items": _CASE, "description": "1 à 3 cas visibles"},
+        "tests": {"type": "array", "items": _CASE, "description": "4 à 8 cas cachés, dont l'instance de l'énoncé et des cas limites"},
+        "hints": {"type": "array", "items": {"type": "string"}, "description": "2 indices progressifs sur le raisonnement"},
+        "explanation_markdown": {"type": "string", "description": "le raisonnement qui mène à la solution"},
+        "reference_solution": {"type": "string", "description": "code complet de la fonction ; il sera exécuté sur tous les cas"},
+    },
+}
+
+PUZZLE_FORMAT = """
+## Format casse-tête
+- body_markdown est l'énoncé : une courte mise en situation, des règles précises et non
+  ambiguës, ce que la fonction reçoit et doit renvoyer. Ne donne pas la méthode.
+- L'énigme doit récompenser une observation (invariant, symétrie, déduction, stratégie) :
+  le lecteur doit pouvoir résoudre l'instance principale à la main, le code sert à
+  formaliser son raisonnement et à le vérifier sur d'autres cas, pas à tout essayer
+  bêtement. Les indices portent sur le raisonnement, jamais sur la syntaxe.
+- La fonction prend au moins un paramètre : c'est la version générale de l'énigme.
+  L'instance racontée dans l'énoncé fait partie des tests cachés, jamais des exemples
+  (les exemples sont de petits cas qui ne donnent pas la réponse).
+- Tous les cas (exemples + tests) ont des args différents.
+- Si la réponse est une collection sans ordre naturel, impose un ordre canonique (trié).
+- Les tests sont exécutés : reference_solution doit tous les passer, starter_code aucun.
+- La longueur demandée s'applique à l'énoncé.
+"""
+
+
 def _season(today: date) -> str:
     return ["hiver", "hiver", "printemps", "printemps", "printemps", "été", "été", "été",
             "automne", "automne", "automne", "hiver"][today.month - 1]
@@ -177,7 +221,7 @@ Date : {date_fr(today)} ({_season(today)}). Lecteur : vit à Bruxelles.
 
 ## Longueur
 Environ {words} mots pour body_markdown. {optional}
-{_headlines_text(spec)}
+{PUZZLE_FORMAT if spec.get("format") == "puzzle" else ""}{_headlines_text(spec)}
 ## Déjà traité dans cette rubrique (ne pas refaire, sauf vraie suite → continuity_of)
 {_history_text(art.topic, history, today)}
 
@@ -193,7 +237,11 @@ class WriterError(RuntimeError):
     pass
 
 
-def call_claude(prompt: str, settings: dict[str, Any]) -> tuple[dict[str, Any], float]:
+def schema_for(spec: dict[str, Any]) -> dict[str, Any]:
+    return PUZZLE_SCHEMA if spec.get("format") == "puzzle" else ARTICLE_SCHEMA
+
+
+def call_claude(prompt: str, settings: dict[str, Any], schema: dict[str, Any] = ARTICLE_SCHEMA) -> tuple[dict[str, Any], float]:
     """Run one headless Claude call; return (structured output, cost in USD)."""
     w = settings["writer"]
     argv = [
@@ -206,7 +254,7 @@ def call_claude(prompt: str, settings: dict[str, Any]) -> tuple[dict[str, Any], 
         "--no-session-persistence", "--disable-slash-commands",
         "--max-budget-usd", str(w["budget_usd"]),
         "--output-format", "json",
-        "--json-schema", json.dumps(ARTICLE_SCHEMA),
+        "--json-schema", json.dumps(schema),
     ]
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=int(w["timeout_s"]))

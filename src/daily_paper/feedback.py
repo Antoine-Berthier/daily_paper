@@ -90,7 +90,7 @@ def process_pending(*, use_agent: bool = True) -> list[str]:
         where = f"[article « {art['title']} », rubrique {art['topic']}{'/' + art['subtype'] if art.get('subtype') else ''}]" if art else "[édition entière]"
         if "rating" in row and row.get("article"):
             ratings[row["article"]] = int(row["rating"])
-        if row.get("click") and row.get("article"):
+        if (row.get("click") or row.get("solved")) and row.get("article"):
             clicked.add(row["article"])
         if row.get("text"):
             comments.append(f"- {where} {row['text']}")

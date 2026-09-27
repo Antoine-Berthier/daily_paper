@@ -18,7 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from . import config, feedback, pipeline, render, state, writer
+from . import config, feedback, pipeline, puzzle, render, state, writer
 
 log = logging.getLogger("daily_paper")
 EDITION_ID = re.compile(r"^\d{4}-\d{2}-\d{2}(-\d+)?$")
@@ -146,9 +146,40 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, target.read_bytes(), MIME[target.suffix])
         self._send(404, b"introuvable", "text/plain; charset=utf-8")
 
+    def _same_origin(self) -> bool:
+        """Only our own pages may run code: blocks other sites posting to localhost."""
+        port = self.server.server_address[1]
+        allowed = {f"http://localhost:{port}", f"http://127.0.0.1:{port}"}
+        return self.headers.get("Origin") in allowed and self.headers.get("Content-Type", "").startswith("application/json")
+
+    def _run_puzzle(self, data: dict[str, Any]) -> None:
+        eid, aid, code = data.get("edition"), data.get("article"), data.get("code")
+        path = config.EDITIONS_DIR / str(eid) / "edition.json"
+        if not (isinstance(code, str) and len(code) < 50_000 and path.is_file()):
+            return self._json({"error": "requête invalide"}, 400)
+        edition = json.loads(path.read_text(encoding="utf-8"))
+        art = next((a for a in edition["articles"] if a["id"] == aid and a.get("kind") == "puzzle"), None)
+        if art is None:
+            return self._json({"error": "casse-tête introuvable"}, 404)
+        all_cases = puzzle.cases(art)
+        result = puzzle.run(code, art["function_name"], all_cases)
+        if "results" in result:
+            # Hidden tests reveal their input and your output, never the expected answer.
+            result["results"] = [
+                {**r, "args": c["args"], "visible": c["visible"], **({"expected": c["expected"]} if c["visible"] else {})}
+                for c, r in zip(all_cases, result["results"])
+            ]
+            if all(r["ok"] for r in result["results"]):
+                state.append_feedback({"edition": eid, "article": aid, "solved": True})
+        self._json(result)
+
     # ------------------------------------------------------------ POST
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/run":
+            if not self._same_origin():
+                return self._json({"error": "origine refusée"}, 403)
+            return self._run_puzzle(self._body())
         data = self._body()
         eid = data.get("edition")
         if eid is not None and not (isinstance(eid, str) and EDITION_ID.match(eid)):

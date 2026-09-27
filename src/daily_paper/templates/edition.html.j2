@@ -24,6 +24,20 @@
   </figure>
   {% endif %}
   <div class="body">{{ a.body_markdown | md | safe }}</div>
+  {% if a.kind == "puzzle" %}
+  <div class="puzzle" data-fn="{{ a.function_name }}">
+    <div class="box-label">Exemples</div>
+    <ul class="examples">{% for c in a.examples %}<li><code>{{ c.args | call(a.function_name) }}</code> → <code>{{ c.expected }}</code></li>{% endfor %}</ul>
+    <textarea class="code" spellcheck="false" autocapitalize="off" autocomplete="off" data-starter="{{ a.starter_code }}">{{ a.starter_code }}</textarea>
+    <div class="run-row">
+      <button class="btn" data-reset>Réinitialiser</button>
+      <button class="btn primary" data-run>Exécuter les tests</button>
+    </div>
+    <div class="run-out" hidden></div>
+    {% for h in a.hints %}<details class="spoiler"><summary>Indice {{ loop.index }}</summary><div>{{ h | md | safe }}</div></details>{% endfor %}
+    <details class="spoiler"><summary>Solution</summary><div>{{ a.explanation_markdown | md | safe }}<pre><code>{{ a.reference_solution }}</code></pre></div></details>
+  </div>
+  {% endif %}
   {% if a.deep_dive %}
   <div class="deep">
     <h4>Pour aller plus loin</h4>
@@ -82,6 +96,45 @@ document.querySelectorAll("article").forEach(art => {
   art.querySelectorAll("a[href^='http']").forEach(a => a.addEventListener("click", () => {
     navigator.sendBeacon && navigator.sendBeacon("/api/click", JSON.stringify({edition: EDITION, article: id, url: a.href}));
   }));
+});
+document.querySelectorAll(".puzzle").forEach(pz => {
+  const art = pz.closest("article").dataset.id, key = `dp:code:${EDITION}:${art}`;
+  const ta = pz.querySelector("textarea.code"), out = pz.querySelector(".run-out");
+  try { const saved = localStorage.getItem(key); if (saved) ta.value = saved; } catch (e) {}
+  const fit = () => { ta.style.height = "auto"; ta.style.height = Math.max(190, ta.scrollHeight + 4) + "px"; };
+  const save = () => { fit(); try { localStorage.setItem(key, ta.value); } catch (e) {} };
+  ta.addEventListener("input", save);
+  fit();
+  ta.addEventListener("keydown", ev => {
+    if (ev.key !== "Tab") return;
+    ev.preventDefault();
+    const s = ta.selectionStart;
+    ta.setRangeText("    ", s, ta.selectionEnd, "end"); save();
+  });
+  pz.querySelector("[data-reset]").addEventListener("click", () => { ta.value = ta.dataset.starter; save(); out.hidden = true; });
+  const esc = t => String(t).replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
+  const call = a => { let s = a.trim(); if (s.startsWith("(") && s.endsWith(")")) s = s.slice(1, -1).trim().replace(/,$/, ""); return `${pz.dataset.fn}(${s})`; };
+  pz.querySelector("[data-run]").addEventListener("click", async () => {
+    out.hidden = false; out.className = "run-out"; out.textContent = "Exécution…";
+    const r = await api("/api/run", {edition: EDITION, article: art, code: ta.value});
+    if (!r) { out.textContent = "Serveur injoignable."; return; }
+    let html = "";
+    if (r.error) { out.classList.add("fail"); html = `<div class="err">${esc(r.error)}</div>`; }
+    else {
+      const ok = r.results.filter(x => x.ok).length, all = ok === r.results.length;
+      out.classList.add(all ? "pass" : "fail");
+      html = `<div class="score">${all ? "✓ Tous les tests passent. Bravo !" : `${ok} / ${r.results.length} tests réussis`}</div><ul>`;
+      for (const x of r.results) {
+        const label = x.visible ? "" : "<span class=\"hid\">caché</span> ";
+        const detail = x.error ? esc(x.error) : `→ ${esc(x.got)}${!x.ok && x.visible ? ` (attendu ${esc(x.expected)})` : ""}`;
+        html += `<li class="${x.ok ? "ok" : "ko"}">${x.ok ? "✓" : "✗"} ${label}<code>${esc(call(x.args))}</code> ${detail}</li>`;
+      }
+      html += "</ul>";
+      if (all) toast("Résolu !");
+    }
+    if (r.stdout) html += `<pre class="stdout">${esc(r.stdout)}</pre>`;
+    out.innerHTML = html;
+  });
 });
 document.getElementById("edition-send").addEventListener("click", async () => {
   const ta = document.getElementById("edition-note"); if (!ta.value.trim()) return;

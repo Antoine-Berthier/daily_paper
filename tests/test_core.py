@@ -190,3 +190,60 @@ def test_footer_shows_cost_and_quota():
                                   "cost_usd": 0.654, "quota": {"five_hour": {"before": 26, "after": 29, "points": 3, "reset": False},
                                                                "seven_day": {"before": 69, "after": 69, "points": 0, "reset": False}}})
     assert "0,65 $" in html and "session 5 h : 3 % du quota (26 → 29 %)" in html and "semaine : &lt; 1 % du quota" in html
+
+
+# ---------------------------------------------------------------- puzzle
+
+from daily_paper import puzzle  # noqa: E402
+
+PUZZLE = {
+    "function_name": "survivor",
+    "starter_code": "def survivor(n, k):\n    pass\n",
+    "reference_solution": "def survivor(n, k):\n    people = list(range(1, n + 1))\n    i = 0\n"
+                          "    while len(people) > 1:\n        i = (i + k - 1) % len(people)\n        people.pop(i)\n"
+                          "    return people[0]\n",
+    "examples": [{"args": "(7, 3)", "expected": "4"}],
+    "tests": [{"args": "(1, 5)", "expected": "1"}, {"args": "(10, 2)", "expected": "5"}, {"args": "(5, 1)", "expected": "5"},
+              {"args": "(41, 3)", "expected": "31"}],
+}
+
+
+def test_reference_puzzle_is_accepted():
+    assert puzzle.check_generated(dict(PUZZLE)) == []
+
+
+def test_wrong_expected_value_is_caught():
+    bad = {**PUZZLE, "tests": PUZZLE["tests"][:3] + [{"args": "(41, 3)", "expected": "30"}]}
+    assert "échoue" in puzzle.check_generated(bad)[0]
+
+
+def test_example_leaking_a_hidden_answer_is_rejected():
+    bad = {**PUZZLE, "tests": PUZZLE["tests"][:3] + [{"args": "(7,3)", "expected": "4"}]}
+    assert "args différents" in puzzle.check_generated(bad)[0]
+
+
+def test_starter_that_already_solves_is_rejected():
+    bad = {**PUZZLE, "starter_code": PUZZLE["reference_solution"] + "# def survivor(\n"}
+    assert "passe déjà" in puzzle.check_generated(bad)[0]
+
+
+def test_run_reports_errors_output_and_infinite_loops():
+    res = puzzle.run("def survivor(n, k):\n    print('dbg')\n    return 1 // 0\n", "survivor", PUZZLE["examples"])
+    assert not res["results"][0]["ok"] and "ZeroDivisionError" in res["results"][0]["error"] and "ligne 3" in res["results"][0]["error"]
+    assert "dbg" in res["stdout"]
+    res = puzzle.run("def survivor(n, k):\n    while True: pass\n", "survivor", PUZZLE["examples"])
+    assert "error" in res
+    assert "introuvable" in puzzle.run("x = 1", "survivor", PUZZLE["examples"])["error"]
+
+
+def test_call_repr():
+    assert render.call_repr("(3, [1, 2])", "f") == "f(3, [1, 2])"
+    assert render.call_repr("(5,)", "f") == "f(5)" and render.call_repr("()", "f") == "f()"
+
+
+def test_pools_hold_only_strings():
+    # A stray "key : value" in a pool silently turns an entry into a dict.
+    for name in config.pool_names():
+        values = config.pool(name)
+        items = [x for v in values.values() for x in v] if isinstance(values, dict) else values
+        assert all(isinstance(x, str) for x in items), name

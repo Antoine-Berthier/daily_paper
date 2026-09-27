@@ -49,6 +49,16 @@ ENV = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoesca
 ENV.filters["md"] = lambda text: MD.render(text or "")
 
 
+def call_repr(args: str, function: str) -> str:
+    """'(3, [1, 2])' → 'f(3, [1, 2])'; '(5,)' → 'f(5)'; '()' → 'f()'."""
+    a = (args or "").strip()
+    inner = a[1:-1].strip().rstrip(",") if a.startswith("(") and a.endswith(")") else a
+    return f"{function}({inner})"
+
+
+ENV.filters["call"] = call_repr
+
+
 def render_edition(edition: dict[str, Any]) -> str:
     return ENV.get_template("edition.html.j2").render(e=edition)
 

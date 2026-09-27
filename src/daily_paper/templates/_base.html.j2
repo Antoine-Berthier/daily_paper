@@ -44,6 +44,28 @@ figure { margin: 0 0 22px; }
 figure img { width: 100%; max-height: 420px; object-fit: cover; border-radius: 4px; display: block; background: var(--rule); }
 figcaption { font: 12px/1.4 var(--sans); color: var(--faint); margin-top: 6px; }
 .body p { margin: 0 0 14px; }
+.puzzle { margin: 18px 0 8px; font-family: var(--sans); }
+.puzzle .box-label { color: var(--muted); }
+.examples { font-size: 15px; padding-left: 18px; margin: 0 0 12px; }
+code, pre, textarea.code { font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace; }
+.body code, .examples code, .run-out code { font-size: .88em; background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+textarea.code { font-size: 14px; line-height: 1.5; min-height: 190px; tab-size: 4; white-space: pre; overflow-x: auto; }
+.run-row { display: flex; justify-content: flex-end; gap: 8px; margin: 8px 0; }
+.run-out { font-size: 14px; border: 1px solid var(--rule); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; }
+.run-out.pass { border-color: var(--tip-ink); background: var(--tip); }
+.run-out.fail { border-color: var(--warn-ink); background: var(--warn); }
+.run-out ul { list-style: none; padding: 0; margin: 6px 0 0; }
+.run-out li { margin: 3px 0; overflow-wrap: anywhere; }
+.run-out li.ok { color: var(--tip-ink); } .run-out li.ko { color: var(--warn-ink); }
+.run-out .score { font-weight: 600; }
+.run-out .hid { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; opacity: .8; }
+.run-out .err { white-space: pre-wrap; }
+pre { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+pre.stdout { margin: 8px 0 0; max-height: 200px; }
+.spoiler { border-top: 1px solid var(--rule); padding: 8px 0; font-size: 15px; }
+.spoiler summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.spoiler summary:hover { color: var(--accent); }
+.spoiler > div { margin-top: 8px; font-family: var(--serif); font-size: 16.5px; }
 .definition { font-size: 20px; margin: 4px 0 10px; }
 .example { color: var(--muted); font-style: italic; margin: 0 0 6px; }
 .body ul, .body ol { padding-left: 22px; margin: 0 0 14px; }
