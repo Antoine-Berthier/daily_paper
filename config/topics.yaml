@@ -111,7 +111,7 @@ topics:
     seed:
       provider: dico2rue
     instructions: |
-      Présente l'expression tirée de dico2rue : sens, exemple d'usage, et si
+      Présente l'expression imposée (tirée par le code dans dico2rue) : sens, exemple d'usage, et si
       tu en trouves une trace fiable, son origine ou son contexte (WebSearch).
       N'invente jamais d'étymologie ; si l'origine est inconnue, dis-le avec
       humour. Termine par une phrase d'exemple inédite que le lecteur pourrait

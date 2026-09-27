@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import pytest
 
-from daily_paper import config, customize, pipeline, planner, render, state, validate
+from daily_paper import config, customize, pipeline, planner, render, state, validate, web
 
 
 def fresh():
@@ -145,3 +145,32 @@ def test_render_containers_and_links():
                       "sources": [{"title": "S", "url": "https://ex.com/a"}], "deep_dive": []}],
     })
     assert 'class="box box-tip"' in html and 'target="_blank"' in html
+
+
+# ---------------------------------------------------------------- dico2rue
+
+
+def _word(word, definition="une définition correcte", up=20, down=2, pid="1"):
+    return {"word": word, "definition": definition, "example": "", "votedfor": str(up),
+            "votesagainst": str(down), "pageId": pid, "pageSlug": "x"}
+
+
+def test_pick_expression_is_mechanical_and_filtered():
+    blocklist = config.pool("dico2rue_blocklist")
+    words = [
+        _word("Nique ta mère", "insulte"),
+        _word("Mc crado", "Mc Donald"),
+        _word("Peu voté", up=1),
+        _word("Déjà vu"),
+        _word("Avoir la taupe au guichet", "être pressé d'aller aux toilettes"),
+    ]
+    rng = random.Random(0)
+    picks = Counter(web.pick_expression(words, {"Déjà vu"}, blocklist, rng)["expression"] for _ in range(300))
+    assert set(picks) == {"Mc crado", "Avoir la taupe au guichet"}
+    assert web.pick_expression([_word("Salope")], set(), blocklist, rng) is None
+
+
+def test_imposed_subject_is_enforced():
+    art = {"title": "t", "subject": "Autre chose", "body_markdown": "mot " * 40, "sources": [], "entities": []}
+    _, problems = validate.check(art, "expression", 110, [], required_subject="Mc crado")
+    assert any("imposé" in p for p in problems)

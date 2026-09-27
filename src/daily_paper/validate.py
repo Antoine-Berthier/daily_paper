@@ -55,11 +55,14 @@ def duplicate_of(article: dict[str, Any], topic: str, history: list[dict[str, An
 
 
 def check(
-    article: dict[str, Any], topic: str, target_words: int, history: list[dict[str, Any]]
+    article: dict[str, Any], topic: str, target_words: int, history: list[dict[str, Any]],
+    required_subject: str | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     if article.get("skip"):
         return article, []
     problems: list[str] = []
+    if required_subject and _norm(article.get("subject", "")) != _norm(required_subject):
+        problems.append(f"le sujet est imposé : « {required_subject} » (subject doit être exactement ce texte).")
     body = article.get("body_markdown", "")
     if not article.get("title") or len(body.split()) < 30:
         problems.append("titre ou corps manquant.")

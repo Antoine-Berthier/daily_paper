@@ -167,31 +167,47 @@ def _dico2rue_words(path: str) -> list[dict[str, Any]]:
         return []
 
 
-def dico2rue_candidates(exclude: set[str], rng: random.Random, n: int = 6) -> list[dict[str, Any]]:
-    """Up to n unused expressions from random dico2rue listing pages.
+def pick_expression(
+    words: list[dict[str, Any]], exclude: set[str], blocklist: list[str], rng: random.Random
+) -> dict[str, Any] | None:
+    """Mechanical choice among listing entries: no LLM involved.
 
-    Votes are a weak signal of funniness, so the writer gets several candidates
-    and picks the funniest non-insulting one; randomness still comes from here.
+    Drops used entries, entries with few votes or too short a definition, and
+    anything matching the blocklist; then draws at random, weighting
+    multi-word expressions ×3 and scaling by the approval ratio.
     """
-    found: dict[str, dict[str, Any]] = {}
-    for _ in range(8):
-        if len(found) >= n:
-            break
+    pattern = re.compile(r"\b(?:" + "|".join(re.escape(b) for b in blocklist) + r")\b", re.I) if blocklist else None
+    pool, weights = [], []
+    for w in words:
+        word = (w.get("word") or "").strip()
+        definition = strip_html(w.get("definition", ""), 400)
+        up, down = int(w.get("votedfor") or 0), int(w.get("votesagainst") or 0)
+        if not word or word in exclude or up < 5 or len(definition) < 8:
+            continue
+        if pattern and (pattern.search(word) or pattern.search(definition)):
+            continue
+        pool.append(w)
+        weights.append((3 if " " in word else 1) * (up + 1) / (up + down + 2))
+    if not pool:
+        return None
+    w = rng.choices(pool, weights)[0]
+    return {
+        "expression": w["word"].strip(),
+        "definition": strip_html(w.get("definition", ""), 400),
+        "example": strip_html(w.get("example", ""), 300),
+        "url": f"{DICO2RUE}/dictionnaire/mot/{w['pageId']}/{w['pageSlug']}/",
+    }
+
+
+def dico2rue_expression(exclude: set[str], blocklist: list[str], rng: random.Random) -> dict[str, Any] | None:
+    """One expression from random dico2rue listing pages (random letter, random page)."""
+    words: list[dict[str, Any]] = []
+    for _ in range(6):
         letter = rng.choice(_LETTERS)
         page = rng.randint(1, 12)
-        words = _dico2rue_words(f"/dictionnaire/alphabet/{letter}/page-{page}/") or _dico2rue_words(
+        words += _dico2rue_words(f"/dictionnaire/alphabet/{letter}/page-{page}/") or _dico2rue_words(
             f"/dictionnaire/alphabet/{letter}/"
         )
-        good = [w for w in words if w.get("word") not in exclude and int(w.get("votedfor") or 0) >= 5]
-        # Multi-word expressions make better stories than single slang words.
-        good.sort(key=lambda w: (" " not in w["word"].strip(), rng.random()))
-        for w in good[:2]:
-            found[w["word"]] = {
-                "expression": w["word"],
-                "definition": strip_html(w.get("definition", ""), 400),
-                "example": strip_html(w.get("example", ""), 300),
-                "url": f"{DICO2RUE}/dictionnaire/mot/{w['pageId']}/{w['pageSlug']}/",
-            }
-    items = list(found.values())
-    rng.shuffle(items)
-    return items[:n]
+        if len(words) >= 20:
+            break
+    return pick_expression(words, exclude, blocklist, rng)

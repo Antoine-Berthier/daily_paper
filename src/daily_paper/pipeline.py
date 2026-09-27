@@ -61,7 +61,8 @@ def _write_one(
                 return None, cost
             note = "Cette rubrique n'est pas optionnelle : écris l'article (skip = false)."
             continue
-        out, problems = validate.check(out, art.topic, target, history)
+        imposed = (art.seed.get("expression") or {}).get("expression")
+        out, problems = validate.check(out, art.topic, target, history, required_subject=imposed)
         if not problems:
             log.info("[%s] ok — %s (%.2f $)", art.topic, out["title"], cost)
             return out, cost
